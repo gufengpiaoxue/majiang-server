@@ -1,0 +1,29 @@
+{
+  "name": "majiang-game-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "configs.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "cross-env": "^5.1.0",
+    "fibers": "^1.0.15",
+    "log4js": "^1.0.1"
+  },
+  "devDependencies": {
+    "express": "^4.16.2",
+    "mysql": "^2.15.0",
+    "pm2": "^2.7.2",
+    "socket.io": "^1.7.4"
+  },
+  "scripts": {
+    "hall": "node ./node_modules/pm2/bin/pm2 start ./hall_server/app.js --name='hall'",
+    "account": "node ./node_modules/pm2/bin/pm2 start ./account_server/app.js --name='account'",
+    "game": "node ./node_modules/pm2/bin/pm2 start ./majiang_server/app.js --name='game'",
+    "start": "npm run stop && cross-env CONFIG_PATH='../configs' npm run hall && cross-env CONFIG_PATH='../configs' npm run account && cross-env CONFIG_PATH='../configs' npm run game",
+    "stop": "./node_modules/pm2/bin/pm2 kill"
+  },
+  "author": "baby2011",
+  "license": "ISC"
+}
