@@ -1,69 +1,61 @@
-﻿var HALL_IP = "118.193.212.245";
-var HALL_CLIENT_PORT = 9001;
-var HALL_ROOM_PORT = 9002;
+const HALL_IP = '10.15.137.246';
+const HALL_CLIENT_PORT = 9001;
+const HALL_ROOM_PORT = 9002;
 
-var ACCOUNT_PRI_KEY = "^&*#$%()@";
-var ROOM_PRI_KEY = "~!@#$(*&^%$&";
+const ACCOUNT_PRI_KEY = '^&*#$%()@';
+const ROOM_PRI_KEY = '~!@#$(*&^%$&';
 
-var LOCAL_IP = 'localhost';
+const LOCAL_IP = '10.15.137.246';
 
-exports.mysql = function(){
-	return {
-		HOST:'localhost',
-		USER:'root',
-		PSWD:'123456',
-		DB:'nodejs',
-		PORT:3306,
-	}
-};
+exports.mysql = () => ({
+  HOST: 'localhost',
+  USER: 'root',
+  PSWD: '123456',
+  DB: 'nodejs',
+  PORT: 3306
+});
 
-//账号服配置
-exports.account_server = function(){
-	return {
-		CLIENT_PORT:9000,
-		HALL_IP:HALL_IP,
-		HALL_CLIENT_PORT:HALL_CLIENT_PORT,
-		ACCOUNT_PRI_KEY:ACCOUNT_PRI_KEY,
-		
-		//
-		DEALDER_API_IP:LOCAL_IP,
-		DEALDER_API_PORT:12581,
-		VERSION:'20161227',
-		APP_WEB:'http://fir.im/2f17',
-	};
-};
+// 账号服配置
+exports.account_server = () => ({
+  CLIENT_PORT: 9000,
+  HALL_IP,
+  HALL_CLIENT_PORT,
+  ACCOUNT_PRI_KEY,
 
-//大厅服配置
-exports.hall_server = function(){
-	return {
-		HALL_IP:HALL_IP,
-		CLEINT_PORT:HALL_CLIENT_PORT,
-		FOR_ROOM_IP:LOCAL_IP,
-		ROOM_PORT:HALL_ROOM_PORT,
-		ACCOUNT_PRI_KEY:ACCOUNT_PRI_KEY,
-		ROOM_PRI_KEY:ROOM_PRI_KEY
-	};	
-};
+  //
+  DEALDER_API_IP: LOCAL_IP,
+  DEALDER_API_PORT: 12581,
+  VERSION: '20161227',
+  APP_WEB: 'http://fir.im/2f17'
+});
 
-//游戏服配置
-exports.game_server = function(){
-	return {
-		SERVER_ID:"001",
-		
-		//暴露给大厅服的HTTP端口号
-		HTTP_PORT:9003,
-		//HTTP TICK的间隔时间，用于向大厅服汇报情况
-		HTTP_TICK_TIME:5000,
-		//大厅服IP
-		HALL_IP:LOCAL_IP,
-		FOR_HALL_IP:LOCAL_IP,
-		//大厅服端口
-		HALL_PORT:HALL_ROOM_PORT,
-		//与大厅服协商好的通信加密KEY
-		ROOM_PRI_KEY:ROOM_PRI_KEY,
-		
-		//暴露给客户端的接口
-		CLIENT_IP:HALL_IP,
-		CLIENT_PORT:10001,
-	};
-};
+// 大厅服配置
+exports.hall_server = () => ({
+  HALL_IP,
+  CLEINT_PORT: HALL_CLIENT_PORT,
+  FOR_ROOM_IP: LOCAL_IP,
+  ROOM_PORT: HALL_ROOM_PORT,
+  ACCOUNT_PRI_KEY,
+  ROOM_PRI_KEY
+});
+
+// 游戏服配置
+exports.game_server = () => ({
+  SERVER_ID: '001',
+
+  // 暴露给大厅服的HTTP端口号
+  HTTP_PORT: 9003,
+  // HTTP TICK的间隔时间，用于向大厅服汇报情况
+  HTTP_TICK_TIME: 5000,
+  // 大厅服IP
+  HALL_IP: LOCAL_IP,
+  FOR_HALL_IP: LOCAL_IP,
+  // 大厅服端口
+  HALL_PORT: HALL_ROOM_PORT,
+  // 与大厅服协商好的通信加密KEY
+  ROOM_PRI_KEY,
+
+  // 暴露给客户端的接口
+  CLIENT_IP: HALL_IP,
+  CLIENT_PORT: 10001
+});

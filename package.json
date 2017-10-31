@@ -7,15 +7,37 @@
     "test": "tests"
   },
   "dependencies": {
+    "babel-eslint": "^8.0.1",
     "cross-env": "^5.1.0",
+    "eslint": "^4.10.0",
+    "eslint-config-airbnb": "^16.1.0",
+    "eslint-plugin-jsx-a11y": "^6.0.2",
+    "eslint-plugin-react": "^7.4.0",
     "fibers": "^1.0.15",
-    "log4js": "^1.0.1"
-  },
-  "devDependencies": {
+    "koa": "^2.3.0",
+    "koa-bodyparser": "^4.2.0",
+    "koa-convert": "^1.2.0",
+    "koa-cors": "0.0.16",
+    "koa-error": "^3.1.0",
+    "koa-logger": "^3.1.0",
+    "koa-router": "^7.2.1",
+    "log4js": "^1.0.1",
+    "nunjucks": "^3.0.1",
+    "promise-mysql": "^3.1.1",
+    "request": "^2.83.0",
+    "request-promise": "^4.2.2",
     "express": "^4.16.2",
     "mysql": "^2.15.0",
     "pm2": "^2.7.2",
     "socket.io": "^1.7.4"
+  },
+  "devDependencies": {
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-config-standard": "^10.2.1",
+    "eslint-plugin-import": "^2.8.0",
+    "eslint-plugin-node": "^5.2.1",
+    "eslint-plugin-promise": "^3.6.0",
+    "eslint-plugin-standard": "^3.0.1"
   },
   "scripts": {
     "hall": "node ./node_modules/pm2/bin/pm2 start ./hall_server/app.js --name='hall'",

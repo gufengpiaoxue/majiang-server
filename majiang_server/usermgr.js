@@ -1,89 +1,85 @@
-var roomMgr = require('./roommgr');
-var userList = {};
-var userOnline = 0;
-exports.bind = function(userId,socket){
-    userList[userId] = socket;
-    userOnline++;
+const roomMgr = require('./roommgr');
+
+const userList = {};
+let userOnline = 0;
+exports.bind = (userId, socket) => {
+  userList[userId] = socket;
+  userOnline += 1;
 };
 
-exports.del = function(userId,socket){
-    delete userList[userId];
-    userOnline--;
+exports.del = (userId) => {
+  delete userList[userId];
+  userOnline -= 1;
 };
 
-exports.get = function(userId){
-    return userList[userId];
+exports.get = userId => userList[userId];
+
+exports.isOnline = (userId) => {
+  const data = userList[userId];
+  if (data != null) {
+    return true;
+  }
+  return false;
 };
 
-exports.isOnline = function(userId){
-    var data = userList[userId];
-    if(data != null){
-        return true;
-    }
-    return false;
+exports.getOnlineCount = () => userOnline;
+
+exports.sendMsg = (userId, event, msgdata) => {
+  const userInfo = userList[userId];
+  if (userInfo == null) {
+    return;
+  }
+  const socket = userInfo;
+  if (socket == null) {
+    return;
+  }
+
+  socket.emit(event, msgdata);
 };
 
-exports.getOnlineCount = function(){
-    return userOnline;
-}
+exports.kickAllInRoom = (roomId) => {
+  if (roomId == null) {
+    return;
+  }
+  const roomInfo = roomMgr.getRoom(roomId);
+  if (roomInfo == null) {
+    return;
+  }
 
-exports.sendMsg = function(userId,event,msgdata){
-    console.log(event);
-    var userInfo = userList[userId];
-    if(userInfo == null){
-        return;
-    }
-    var socket = userInfo;
-    if(socket == null){
-        return;
-    }
+  for (let i = 0; i < roomInfo.seats.length; i += 1) {
+    const rs = roomInfo.seats[i];
 
-    socket.emit(event,msgdata);
+    // 如果不需要发给发送方，则跳过
+    if (rs.userId > 0) {
+      const socket = userList[rs.userId];
+      if (socket != null) {
+        exports.del(rs.userId);
+        socket.disconnect();
+      }
+    }
+  }
 };
 
-exports.kickAllInRoom = function(roomId){
-    if(roomId == null){
-        return;
-    }
-    var roomInfo = roomMgr.getRoom(roomId);
-    if(roomInfo == null){
-        return;
-    }
+exports.broacastInRoom = (event, data, sender, includingSender) => {
+  const roomId = roomMgr.getUserRoom(sender);
+  if (roomId == null) {
+    return;
+  }
+  const roomInfo = roomMgr.getRoom(roomId);
+  if (roomInfo == null) {
+    return;
+  }
 
-    for(var i = 0; i < roomInfo.seats.length; ++i){
-        var rs = roomInfo.seats[i];
+  for (let i = 0; i < roomInfo.seats.length; i += 1) {
+    const rs = roomInfo.seats[i];
 
-        //如果不需要发给发送方，则跳过
-        if(rs.userId > 0){
-            var socket = userList[rs.userId];
-            if(socket != null){
-                exports.del(rs.userId);
-                socket.disconnect();
-            }
-        }
+    // 如果不需要发给发送方，则跳过
+    if (rs.userId === sender && includingSender !== true) {
+      continue;
     }
-};
-
-exports.broacastInRoom = function(event,data,sender,includingSender){
-    var roomId = roomMgr.getUserRoom(sender);
-    if(roomId == null){
-        return;
+    const socket = userList[rs.userId];
+    if (socket != null) {
+      socket.emit(event, data);
     }
-    var roomInfo = roomMgr.getRoom(roomId);
-    if(roomInfo == null){
-        return;
-    }
-
-    for(var i = 0; i < roomInfo.seats.length; ++i){
-        var rs = roomInfo.seats[i];
-
-        //如果不需要发给发送方，则跳过
-        if(rs.userId == sender && includingSender != true){
-            continue;
-        }
-        var socket = userList[rs.userId];
-        if(socket != null){
-            socket.emit(event,data);
-        }
-    }
+  }
 };

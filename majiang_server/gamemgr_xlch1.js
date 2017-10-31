@@ -1,22 +1,19 @@
-/* eslint-disable */
+const roomMgr = require('./roommgr');
+const userMgr = require('./usermgr');
+const mjutils = require('./mjutils');
+const db = require('../utils/db');
+const crypto = require('../utils/crypto');
 
-var roomMgr = require('./roommgr');
-var userMgr = require('./usermgr');
-var mjutils = require('./mjutils');
-var db = require('../utils/db');
-var crypto = require('../utils/crypto');
+const games = {};
 
-var games = {};
-var gamesIdBase = 0;
+const ACTION_CHUPAI = 1;
+const ACTION_MOPAI = 2;
+const ACTION_PENG = 3;
+const ACTION_GANG = 4;
+const ACTION_HU = 5;
+const ACTION_ZIMO = 6;
 
-var ACTION_CHUPAI = 1;
-var ACTION_MOPAI = 2;
-var ACTION_PENG = 3;
-var ACTION_GANG = 4;
-var ACTION_HU = 5;
-var ACTION_ZIMO = 6;
-
-var gameSeatsOfUsers = {};
+const gameSeatsOfUsers = {};
 
 function getMJType(id) {
   if (id >= 0 && id < 9) {
@@ -25,108 +22,108 @@ function getMJType(id) {
   } else if (id >= 9 && id < 18) {
     // 条
     return 1;
-  } else if (id >= 18 && id < 27) {
-    // 万
-    return 2;
   }
+  return 2;
 }
 
 function shuffle(game) {
-  var mahjongs = game.mahjongs;
+  const { mahjongs } = game;
 
   /*
-    var idx = 0;
-    for(var i = 0; i < 12; ++i){
+    const idx = 0;
+    for(const i = 0; i < 12; ++i){
         game.mahjongs[idx++] = 0;
     }
 
-    for(var i = 0; i < 12; ++i){
+    for(const i = 0; i < 12; ++i){
         game.mahjongs[idx++] = 1;
     }
 
-    for(var i = 0; i < 12; ++i){
+    for(const i = 0; i < 12; ++i){
         game.mahjongs[idx++] = 2;
     }
 
-    for(var i = 0; i < 12; ++i){
+    for(const i = 0; i < 12; ++i){
         game.mahjongs[idx++] = 3;
     }
 
 
-    for(var i = idx; i < game.mahjongs.length; ++i){
+    for(const i = idx; i < game.mahjongs.length; ++i){
         game.mahjongs[i] = 4;
     }
     return;
     */
 
   // 筒 (0 ~ 8 表示筒子
-  var index = 0;
-  for (var i = 0; i < 9; ++i) {
-    for (var c = 0; c < 4; ++c) {
+  let index = 0;
+  for (let i = 0; i < 9; i += 1) {
+    for (let c = 0; c < 4; c += 1) {
       mahjongs[index] = i;
-      index++;
+      index += 1;
     }
   }
 
   // 条 9 ~ 17表示条子
-  for (var i = 9; i < 18; ++i) {
-    for (var c = 0; c < 4; ++c) {
+  for (let i = 9; i < 18; i += 1) {
+    for (let c = 0; c < 4; c += 1) {
       mahjongs[index] = i;
-      index++;
+      index += 1;
     }
   }
 
   // 万
   // 条 18 ~ 26表示万
-  for (var i = 18; i < 27; ++i) {
-    for (var c = 0; c < 4; ++c) {
+  for (let i = 18; i < 27; i += 1) {
+    for (let c = 0; c < 4; c += 1) {
       mahjongs[index] = i;
-      index++;
+      index += 1;
     }
   }
 
-  for (var i = 0; i < mahjongs.length; ++i) {
-    var lastIndex = mahjongs.length - 1 - i;
-    var index = Math.floor(Math.random() * lastIndex);
-    var t = mahjongs[index];
-    mahjongs[index] = mahjongs[lastIndex];
+  for (let i = 0; i < mahjongs.length; i += 1) {
+    const lastIndex = mahjongs.length - 1 - i;
+    const idx = Math.floor(Math.random() * lastIndex);
+    const t = mahjongs[idx];
+    mahjongs[idx] = mahjongs[lastIndex];
     mahjongs[lastIndex] = t;
   }
 }
 
-function mopai(game, seatIndex) {
-  if (game.currentIndex == game.mahjongs.length) {
+function mopai(gameO, seatIndex) {
+  const game = gameO;
+  if (game.currentIndex === game.mahjongs.length) {
     return -1;
   }
-  var data = game.gameSeats[seatIndex];
-  var mahjongs = data.holds;
-  var pai = game.mahjongs[game.currentIndex];
+  const data = game.gameSeats[seatIndex];
+  const mahjongs = data.holds;
+  const pai = game.mahjongs[game.currentIndex];
   mahjongs.push(pai);
 
   // 统计牌的数目 ，用于快速判定（空间换时间）
-  var c = data.countMap[pai];
+  let c = data.countMap[pai];
   if (c == null) {
     c = 0;
   }
   data.countMap[pai] = c + 1;
-  game.currentIndex++;
+  game.currentIndex += 1;
   return pai;
 }
 
-function deal(game) {
+function deal(gameO) {
+  const game = gameO;
   // 强制清0
   game.currentIndex = 0;
 
   // 每人13张 一共 13*4 ＝ 52张 庄家多一张 53张
-  var seatIndex = game.button;
-  for (var i = 0; i < 52; ++i) {
-    var mahjongs = game.gameSeats[seatIndex].holds;
+  let seatIndex = game.button;
+  for (let i = 0; i < 52; i += 1) {
+    let mahjongs = game.gameSeats[seatIndex].holds;
     if (mahjongs == null) {
       mahjongs = [];
       game.gameSeats[seatIndex].holds = mahjongs;
     }
     mopai(game, seatIndex);
-    seatIndex++;
+    seatIndex += 1;
     seatIndex %= 4;
   }
 
@@ -137,27 +134,29 @@ function deal(game) {
 }
 
 // 检查是否可以碰
-function checkCanPeng(game, seatData, targetPai) {
-  if (getMJType(targetPai) == seatData.que) {
+function checkCanPeng(game, seatDataO, targetPai) {
+  const seatData = seatDataO;
+  if (getMJType(targetPai) === seatData.que) {
     return;
   }
-  var count = seatData.countMap[targetPai];
+  const count = seatData.countMap[targetPai];
   if (count != null && count >= 2) {
     seatData.canPeng = true;
   }
 }
 
 // 检查是否可以点杠
-function checkCanDianGang(game, seatData, targetPai) {
+function checkCanDianGang(game, seatDataO, targetPai) {
+  const seatData = seatDataO;
   // 检查玩家手上的牌
   // 如果没有牌了，则不能再杠
   if (game.mahjongs.length <= game.currentIndex) {
     return;
   }
-  if (getMJType(targetPai) == seatData.que) {
+  if (getMJType(targetPai) === seatData.que) {
     return;
   }
-  var count = seatData.countMap[targetPai];
+  const count = seatData.countMap[targetPai];
   if (count != null && count >= 3) {
     seatData.canGang = true;
     seatData.gangPai.push(targetPai);
@@ -165,22 +164,23 @@ function checkCanDianGang(game, seatData, targetPai) {
 }
 
 // 检查是否可以暗杠
-function checkCanAnGang(game, seatData) {
+function checkCanAnGang(game, seatData1) {
+  const seatData = seatData1;
   // 如果没有牌了，则不能再杠
   if (game.mahjongs.length <= game.currentIndex) {
     return;
   }
-
-  for (var key in seatData.countMap) {
-    var pai = parseInt(key);
-    if (getMJType(pai) != seatData.que) {
-      var c = seatData.countMap[key];
-      if (c != null && c == 4) {
+  const { countMap } = seatData;
+  Object.keys(countMap).forEach((key) => {
+    const pai = parseInt(key, 10);
+    if (getMJType(pai) !== seatData.que) {
+      const c = countMap[key];
+      if (c != null && c === 4) {
         seatData.canGang = true;
         seatData.gangPai.push(pai);
       }
     }
-  }
+  });
 }
 
 // 检查是否可以弯杠(自己摸起来的时候)
@@ -191,9 +191,9 @@ function checkCanWanGang(game, seatData) {
   }
 
   // 从碰过的牌中选
-  for (var i = 0; i < seatData.pengs.length; ++i) {
-    var pai = seatData.pengs[i];
-    if (seatData.countMap[pai] == 1) {
+  for (let i = 0; i < seatData.pengs.length; i += 1) {
+    const pai = seatData.pengs[i];
+    if (seatData.countMap[pai] === 1) {
       seatData.canGang = true;
       seatData.gangPai.push(pai);
     }
@@ -202,19 +202,20 @@ function checkCanWanGang(game, seatData) {
 
 function checkCanHu(game, seatData, targetPai) {
   game.lastHuPaiSeat = -1;
-  if (getMJType(targetPai) == seatData.que) {
+  if (getMJType(targetPai) === seatData.que) {
     return;
   }
   seatData.canHu = false;
-  for (var k in seatData.tingMap) {
-    if (targetPai == k) {
+  const { tingMap } = seatData;
+  Object.keys(tingMap).forEach((k) => {
+    if (targetPai === k) {
       seatData.canHu = true;
     }
-  }
+  });
 }
 
 function clearAllOptions(game, seatData) {
-  var fnClear = function (sd) {
+  const fnClear = function (sd) {
     sd.canPeng = false;
     sd.canGang = false;
     sd.gangPai = [];
@@ -225,7 +226,7 @@ function clearAllOptions(game, seatData) {
     fnClear(seatData);
   } else {
     game.qiangGangContext = null;
-    for (var i = 0; i < game.gameSeats.length; ++i) {
+    for (let i = 0; i < game.gameSeats.length; i += 1) {
       fnClear(game.gameSeats[i]);
     }
   }
@@ -236,28 +237,30 @@ function checkCanTingPai(game, seatData) {
   seatData.tingMap = {};
 
   // 检查手上的牌是不是已打缺，如果未打缺，则不进行判定
-  for (var i = 0; i < seatData.holds.length; ++i) {
-    var pai = seatData.holds[i];
-    if (getMJType(pai) == seatData.que) {
+  for (let i = 0; i < seatData.holds.length; i += 1) {
+    const pai = seatData.holds[i];
+    if (getMJType(pai) === seatData.que) {
       return;
     }
   }
 
   // 检查是否是七对 前提是没有碰，也没有杠 ，即手上拥有13张牌
-  if (seatData.holds.length == 13) {
+  if (seatData.holds.length === 13) {
     // 有5对牌
-    var hu = false;
-    var danPai = -1;
-    var pairCount = 0;
-    for (var k in seatData.countMap) {
-      var c = seatData.countMap[k];
-      if (c == 2 || c == 3) {
-        pairCount++;
-      } else if (c == 4) {
+    let danPai = -1;
+    let pairCount = 0;
+    const { countMap } = seatData;
+    const keys = Object.keys(countMap);
+    for (let i = 0; i < keys.length; i += 1) {
+      const k = keys[i];
+      const c = seatData.countMap[k];
+      if (c === 2 || c === 3) {
+        pairCount += 1;
+      } else if (c === 4) {
         pairCount += 2;
       }
 
-      if (c == 1 || c == 3) {
+      if (c === 1 || c === 3) {
         // 如果已经有单牌了，表示不止一张单牌，并没有下叫。直接闪
         if (danPai >= 0) {
           break;
@@ -274,6 +277,7 @@ function checkCanTingPai(game, seatData) {
         fan: 2,
         pattern: '7pairs'
       };
+
       // 如果是，则直接返回咯
     }
   }
@@ -282,12 +286,11 @@ function checkCanTingPai(game, seatData) {
   // 对对胡叫牌有两种情况
   // 1、N坎 + 1张单牌
   // 2、N-1坎 + 两对牌
-  var singleCount = 0;
-  var colCount = 0;
-  var pairCount = 0;
-  var arr = [];
-  for (var k in seatData.countMap) {
-    var c = seatData.countMap[k];
+  const singleCount = 0;
+  const pairCount = 0;
+  const arr = [];
+  for (const k in seatData.countMap) {
+    const c = seatData.countMap[k];
     if (c == 1) {
       singleCount++;
       arr.push(k);
@@ -306,9 +309,9 @@ function checkCanTingPai(game, seatData) {
   if (
     (pairCount == 2 && singleCount == 0) || (pairCount == 0 && singleCount == 1)
   ) {
-    for (var i = 0; i < arr.length; ++i) {
+    for (const i = 0; i < arr.length; ++i) {
       // 对对胡1番
-      var p = arr[i];
+      const p = arr[i];
       if (seatData.tingMap[p] == null) {
         seatData.tingMap[p] = {
           pattern: 'duidui',
@@ -336,7 +339,7 @@ function checkCanTingPai(game, seatData) {
 }
 
 function getSeatIndex(userId) {
-  var seatIndex = roomMgr.getUserSeat(userId);
+  const seatIndex = roomMgr.getUserSeat(userId);
   if (seatIndex == null) {
     return null;
   }
@@ -344,11 +347,11 @@ function getSeatIndex(userId) {
 }
 
 function getGameByUserID(userId) {
-  var roomId = roomMgr.getUserRoom(userId);
+  const roomId = roomMgr.getUserRoom(userId);
   if (roomId == null) {
     return null;
   }
-  var game = games[roomId];
+  const game = games[roomId];
   return game;
 }
 
@@ -365,7 +368,7 @@ function sendOperations(game, seatData, pai) {
       pai = seatData.holds[seatData.holds.length - 1];
     }
 
-    var data = {
+    const data = {
       pai,
       hu: seatData.canHu,
       peng: seatData.canPeng,
@@ -395,18 +398,17 @@ function moveToNextUser(game, nextSeat) {
 
 function doUserMoPai(game) {
   game.chuPai = -1;
-  var turnSeat = game.gameSeats[game.turn];
+  const turnSeat = game.gameSeats[game.turn];
   turnSeat.lastFangGangSeat = -1;
   turnSeat.guoHuFan = -1;
-  var pai = mopai(game, game.turn);
+  const pai = mopai(game, game.turn);
   // 牌摸完了，结束
   if (pai == -1) {
     doGameOver(game, turnSeat.userId);
     return;
   }
-  var numOfMJ = game.mahjongs.length - game.currentIndex;
+  const numOfMJ = game.mahjongs.length - game.currentIndex;
   userMgr.broacastInRoom('mj_count_push', numOfMJ, turnSeat.userId, true);
-
 
   recordGameAction(game, game.turn, ACTION_MOPAI, pai);
 
@@ -440,8 +442,8 @@ function doUserMoPai(game) {
 }
 
 function isSameType(type, arr) {
-  for (var i = 0; i < arr.length; ++i) {
-    var t = getMJType(arr[i]);
+  for (const i = 0; i < arr.length; ++i) {
+    const t = getMJType(arr[i]);
     if (type != -1 && type != t) {
       return false;
     }
@@ -451,7 +453,7 @@ function isSameType(type, arr) {
 }
 
 function isQingYiSe(gameSeatData) {
-  var type = getMJType(gameSeatData.holds[0]);
+  const type = getMJType(gameSeatData.holds[0]);
 
   // 检查手上的牌
   if (isSameType(type, gameSeatData.holds) == false) {
@@ -486,9 +488,9 @@ function isMenQing(gameSeatData) {
 }
 
 function isZhongZhang(gameSeatData) {
-  var fn = function (arr) {
-    for (var i = 0; i < arr.length; ++i) {
-      var pai = arr[i];
+  const fn = function (arr) {
+    for (const i = 0; i < arr.length; ++i) {
+      const pai = arr[i];
       if (
         pai == 0 || pai == 8 || pai == 9 || pai == 17 || pai == 18 || pai == 26
       ) {
@@ -517,9 +519,9 @@ function isZhongZhang(gameSeatData) {
 }
 
 function isJiangDui(gameSeatData) {
-  var fn = function (arr) {
-    for (var i = 0; i < arr.length; ++i) {
-      var pai = arr[i];
+  const fn = function (arr) {
+    for (const i = 0; i < arr.length; ++i) {
+      const pai = arr[i];
       if (
         pai != 1 &&
         pai != 4 &&
@@ -556,7 +558,7 @@ function isJiangDui(gameSeatData) {
 }
 
 function isTinged(seatData) {
-  for (var k in seatData.tingMap) {
+  for (const k in seatData.tingMap) {
     return true;
   }
   return false;
@@ -572,11 +574,11 @@ function computeFanScore(game, fan) {
 // 是否需要查大叫(有人没有下叫)
 function needChaDaJiao(game) {
   // 查叫
-  var numOfHued = 0;
-  var numOfTinged = 0;
-  var numOfUntinged = 0;
-  for (var i = 0; i < game.gameSeats.length; ++i) {
-    var ts = game.gameSeats[i];
+  const numOfHued = 0;
+  const numOfTinged = 0;
+  const numOfUntinged = 0;
+  for (const i = 0; i < game.gameSeats.length; ++i) {
+    const ts = game.gameSeats[i];
     if (ts.hued) {
       numOfHued++;
       numOfTinged++;
@@ -601,9 +603,9 @@ function needChaDaJiao(game) {
 
 function findMaxFanTingPai(ts) {
   // 找出最大番
-  var cur = null;
-  for (var k in ts.tingMap) {
-    var tpai = ts.tingMap[k];
+  const cur = null;
+  for (const k in ts.tingMap) {
+    const tpai = ts.tingMap[k];
     if (cur == null || tpai.fan > cur.fan) {
       cur = tpai;
       cur.pai = parseInt(k);
@@ -613,9 +615,9 @@ function findMaxFanTingPai(ts) {
 }
 
 function findUnTingedPlayers(game) {
-  var arr = [];
-  for (var i = 0; i < game.gameSeats.length; ++i) {
-    var ts = game.gameSeats[i];
+  const arr = [];
+  for (const i = 0; i < game.gameSeats.length; ++i) {
+    const ts = game.gameSeats[i];
     // 如果没有胡，且没有听牌
     if (!ts.hued && !isTinged(ts)) {
       arr.push(i);
@@ -625,17 +627,17 @@ function findUnTingedPlayers(game) {
 }
 
 function getNumOfGen(seatData) {
-  var numOfGangs =
+  const numOfGangs =
     seatData.diangangs.length +
     seatData.wangangs.length +
     seatData.angangs.length;
-  for (var k = 0; k < seatData.pengs.length; ++k) {
-    var pai = seatData.pengs[k];
+  for (const k = 0; k < seatData.pengs.length; ++k) {
+    const pai = seatData.pengs[k];
     if (seatData.countMap[pai] == 1) {
       numOfGangs++;
     }
   }
-  for (var k in seatData.countMap) {
+  for (const k in seatData.countMap) {
     if (seatData.countMap[k] == 4) {
       numOfGangs++;
     }
@@ -644,15 +646,15 @@ function getNumOfGen(seatData) {
 }
 
 function chaJiao(game) {
-  var arr = findUnTingedPlayers(game);
+  const arr = findUnTingedPlayers(game);
   if (arr.length == 0) {
     return;
   }
-  for (var i = 0; i < game.gameSeats.length; ++i) {
-    var ts = game.gameSeats[i];
+  for (const i = 0; i < game.gameSeats.length; ++i) {
+    const ts = game.gameSeats[i];
     // 如果听牌了，则未叫牌的人要给钱
     if (isTinged(ts)) {
-      var cur = findMaxFanTingPai(ts);
+      const cur = findMaxFanTingPai(ts);
       ts.huInfo.push({
         ishupai: true,
         action: 'chadajiao',
@@ -662,7 +664,7 @@ function chaJiao(game) {
         numofgen: getNumOfGen(ts)
       });
 
-      for (var j = 0; j < arr.length; ++j) {
+      for (const j = 0; j < arr.length; ++j) {
         game.gameSeats[arr[j]].huInfo.push({
           action: 'beichadajiao',
           target: i,
@@ -674,23 +676,23 @@ function chaJiao(game) {
 }
 
 function calculateResult(game, roomInfo) {
-  var isNeedChaDaJia = needChaDaJiao(game);
+  const isNeedChaDaJia = needChaDaJiao(game);
   if (isNeedChaDaJia) {
     chaJiao(game);
   }
 
-  var baseScore = game.conf.baseScore;
+  const baseScore = game.conf.baseScore;
 
-  for (var i = 0; i < game.gameSeats.length; ++i) {
-    var sd = game.gameSeats[i];
+  for (const i = 0; i < game.gameSeats.length; ++i) {
+    const sd = game.gameSeats[i];
     // 对所有胡牌的玩家进行统计
     if (isTinged(sd)) {
       // 收杠钱
-      var additonalscore = 0;
-      for (var a = 0; a < sd.actions.length; ++a) {
-        var ac = sd.actions[a];
+      const additonalscore = 0;
+      for (const a = 0; a < sd.actions.length; ++a) {
+        const ac = sd.actions[a];
         if (ac.type == 'fanggang') {
-          var ts = game.gameSeats[ac.targets[0]];
+          const ts = game.gameSeats[ac.targets[0]];
           // 检查放杠的情况，如果目标没有和牌，且没有叫牌，则不算 用于优化前端显示
           if (isNeedChaDaJia && ts.hued == false && isTinged(ts) == false) {
             ac.state = 'nop';
@@ -699,11 +701,11 @@ function calculateResult(game, roomInfo) {
           ac.type == 'angang' || ac.type == 'wangang' || ac.type == 'diangang'
         ) {
           if (ac.state != 'nop') {
-            var acscore = ac.score;
+            const acscore = ac.score;
             additonalscore += ac.targets.length * acscore * baseScore;
             // 扣掉目标方的分
-            for (var t = 0; t < ac.targets.length; ++t) {
-              var six = ac.targets[t];
+            for (const t = 0; t < ac.targets.length; ++t) {
+              const six = ac.targets[t];
               game.gameSeats[six].score -= acscore * baseScore;
             }
           }
@@ -711,14 +713,14 @@ function calculateResult(game, roomInfo) {
           // 对于呼叫转移，如果对方没有叫牌，表示不得行
           if (isTinged(ac.owner)) {
             // 如果
-            var ref = ac.ref;
-            var acscore = ref.score;
-            var total = ref.targets.length * acscore * baseScore;
+            const ref = ac.ref;
+            const acscore = ref.score;
+            const total = ref.targets.length * acscore * baseScore;
             additonalscore += total;
             // 扣掉目标方的分
             if (ref.payTimes == 0) {
-              for (var t = 0; t < ref.targets.length; ++t) {
-                var six = ref.targets[t];
+              for (const t = 0; t < ref.targets.length; ++t) {
+                const six = ref.targets[t];
                 game.gameSeats[six].score -= acscore * baseScore;
               }
             } else {
@@ -749,8 +751,8 @@ function calculateResult(game, roomInfo) {
       sd.numMingGang = sd.wangangs.length + sd.diangangs.length;
 
       // 进行胡牌结算
-      for (var j = 0; j < sd.huInfo.length; ++j) {
-        var info = sd.huInfo[j];
+      for (const j = 0; j < sd.huInfo.length; ++j) {
+        const info = sd.huInfo[j];
         if (!info.ishupai) {
           sd.numDianPao++;
           continue;
@@ -758,7 +760,7 @@ function calculateResult(game, roomInfo) {
         // 统计自己的番子和分数
         // 基础番(平胡0番，对对胡1番、七对2番) + 清一色2番 + 杠+1番
         // 杠上花+1番，杠上炮+1番 抢杠胡+1番，金钩胡+1番，海底胡+1番
-        var fan = info.fan;
+        const fan = info.fan;
         sd.holds.push(info.pai);
         if (sd.countMap[info.pai] != null) {
           sd.countMap[info.pai]++;
@@ -787,7 +789,7 @@ function calculateResult(game, roomInfo) {
           }
         }
 
-        var isjiangdui = false;
+        const isjiangdui = false;
         if (game.conf.jiangdui) {
           if (info.pattern == '7pairs') {
             if (info.numofgen > 0) {
@@ -835,7 +837,7 @@ function calculateResult(game, roomInfo) {
           fan += 1;
         }
 
-        var extraScore = 0;
+        const extraScore = 0;
         if (info.iszimo) {
           if (game.conf.zimo == 0) {
             // 自摸加底
@@ -847,10 +849,10 @@ function calculateResult(game, roomInfo) {
           }
         }
         // 和牌的玩家才加这个分
-        var score = computeFanScore(game, fan) + extraScore;
+        const score = computeFanScore(game, fan) + extraScore;
         if (info.action == 'chadajiao') {
           // 收所有没有叫牌的人的钱
-          for (var t = 0; t < game.gameSeats.length; ++t) {
+          for (const t = 0; t < game.gameSeats.length; ++t) {
             if (!isTinged(game.gameSeats[t])) {
               game.gameSeats[t].score -= score;
               sd.score += score;
@@ -863,7 +865,7 @@ function calculateResult(game, roomInfo) {
         } else if (info.iszimo) {
           // 收所有人的钱
           sd.score += score * game.gameSeats.length;
-          for (var t = 0; t < game.gameSeats.length; ++t) {
+          for (const t = 0; t < game.gameSeats.length; ++t) {
             game.gameSeats[t].score -= score;
           }
           sd.numZiMo++;
@@ -886,8 +888,8 @@ function calculateResult(game, roomInfo) {
       // 一定要用 += 。 因为此时的sd.score可能是负的
       sd.score += additonalscore;
     } else {
-      for (var a = sd.actions.length - 1; a >= 0; --a) {
-        var ac = sd.actions[a];
+      for (const a = sd.actions.length - 1; a >= 0; --a) {
+        const ac = sd.actions[a];
         if (
           ac.type == 'angang' || ac.type == 'wangang' || ac.type == 'diangang'
         ) {
@@ -895,11 +897,11 @@ function calculateResult(game, roomInfo) {
           if (isNeedChaDaJia) {
             sd.actions.splice(a, 1);
           } else if (ac.state != 'nop') {
-            var acscore = ac.score;
+            const acscore = ac.score;
             sd.score += ac.targets.length * acscore * baseScore;
             // 扣掉目标方的分
-            for (var t = 0; t < ac.targets.length; ++t) {
-              var six = ac.targets[t];
+            for (const t = 0; t < ac.targets.length; ++t) {
+              const six = ac.targets[t];
               game.gameSeats[six].score -= acscore * baseScore;
             }
           }
@@ -910,24 +912,24 @@ function calculateResult(game, roomInfo) {
 }
 
 function doGameOver(game, userId, forceEnd) {
-  var roomId = roomMgr.getUserRoom(userId);
+  const roomId = roomMgr.getUserRoom(userId);
   if (roomId == null) {
     return;
   }
-  var roomInfo = roomMgr.getRoom(roomId);
+  const roomInfo = roomMgr.getRoom(roomId);
   if (roomInfo == null) {
     return;
   }
 
-  var results = [];
-  var dbresult = [0, 0, 0, 0];
+  const results = [];
+  const dbresult = [0, 0, 0, 0];
 
-  var fnNoticeResult = function (isEnd) {
-    var endinfo = null;
+  const fnNoticeResult = function (isEnd) {
+    const endinfo = null;
     if (isEnd) {
       endinfo = [];
-      for (var i = 0; i < roomInfo.seats.length; ++i) {
-        var rs = roomInfo.seats[i];
+      for (const i = 0; i < roomInfo.seats.length; ++i) {
+        const rs = roomInfo.seats[i];
         endinfo.push({
           numzimo: rs.numZiMo,
           numjiepao: rs.numJiePao,
@@ -963,9 +965,9 @@ function doGameOver(game, userId, forceEnd) {
       calculateResult(game, roomInfo);
     }
 
-    for (var i = 0; i < roomInfo.seats.length; ++i) {
-      var rs = roomInfo.seats[i];
-      var sd = game.gameSeats[i];
+    for (const i = 0; i < roomInfo.seats.length; ++i) {
+      const rs = roomInfo.seats[i];
+      const sd = game.gameSeats[i];
 
       rs.ready = false;
       rs.score += sd.score;
@@ -976,7 +978,7 @@ function doGameOver(game, userId, forceEnd) {
       rs.numMingGang += sd.numMingGang;
       rs.numChaJiao += sd.numChaJiao;
 
-      var userRT = {
+      const userRT = {
         userId: sd.userId,
         actions: [],
         pengs: sd.pengs,
@@ -992,7 +994,7 @@ function doGameOver(game, userId, forceEnd) {
         huinfo: sd.huInfo
       };
 
-      for (var k in sd.actions) {
+      for (const k in sd.actions) {
         userRT.actions[k] = {
           type: sd.actions[k].type
         };
@@ -1004,7 +1006,7 @@ function doGameOver(game, userId, forceEnd) {
     }
     delete games[roomId];
 
-    var old = roomInfo.nextButton;
+    const old = roomInfo.nextButton;
     if (game.yipaoduoxiang >= 0) {
       roomInfo.nextButton = game.yipaoduoxiang;
     } else if (game.firstHupai >= 0) {
@@ -1026,7 +1028,7 @@ function doGameOver(game, userId, forceEnd) {
       db.update_game_result(roomInfo.uuid, game.gameIndex, dbresult);
 
       // 记录玩家操作
-      var str = JSON.stringify(game.actionList);
+      const str = JSON.stringify(game.actionList);
       db.update_game_action_records(roomInfo.uuid, game.gameIndex, str);
 
       // 保存游戏局数
@@ -1034,21 +1036,21 @@ function doGameOver(game, userId, forceEnd) {
 
       // 如果是第一次，则扣除房卡
       if (roomInfo.numOfGames == 1) {
-        var cost = 2;
+        const cost = 2;
         if (roomInfo.conf.maxGames == 8) {
           cost = 3;
         }
         db.cost_gems(game.gameSeats[0].userId, cost);
       }
 
-      var isEnd = roomInfo.numOfGames >= roomInfo.conf.maxGames;
+      const isEnd = roomInfo.numOfGames >= roomInfo.conf.maxGames;
       fnNoticeResult(isEnd);
     });
   }
 }
 
 function recordUserAction(game, seatData, type, target) {
-  var d = { type, targets: [] };
+  const d = { type, targets: [] };
   if (target != null) {
     if (typeof target === 'number') {
       d.targets.push(target);
@@ -1056,8 +1058,8 @@ function recordUserAction(game, seatData, type, target) {
       d.targets = target;
     }
   } else {
-    for (var i = 0; i < game.gameSeats.length; ++i) {
-      var s = game.gameSeats[i];
+    for (const i = 0; i < game.gameSeats.length; ++i) {
+      const s = game.gameSeats[i];
       // 血流成河，所有自摸，暗杠，弯杠，都算三家
       if (i != seatData.seatIndex /* && s.hued == false */) {
         d.targets.push(i);
@@ -1078,22 +1080,22 @@ function recordGameAction(game, si, action, pai) {
 }
 
 exports.setReady = function (userId, callback) {
-  var roomId = roomMgr.getUserRoom(userId);
+  const roomId = roomMgr.getUserRoom(userId);
   if (roomId == null) {
     return;
   }
-  var roomInfo = roomMgr.getRoom(roomId);
+  const roomInfo = roomMgr.getRoom(roomId);
   if (roomInfo == null) {
     return;
   }
 
   roomMgr.setReady(userId, true);
 
-  var game = games[roomId];
+  const game = games[roomId];
   if (game == null) {
     if (roomInfo.seats.length == 4) {
-      for (var i = 0; i < roomInfo.seats.length; ++i) {
-        var s = roomInfo.seats[i];
+      for (const i = 0; i < roomInfo.seats.length; ++i) {
+        const s = roomInfo.seats[i];
         if (s.ready == false || userMgr.isOnline(s.userId) == false) {
           return;
         }
@@ -1102,10 +1104,10 @@ exports.setReady = function (userId, callback) {
       exports.begin(roomId);
     }
   } else {
-    var numOfMJ = game.mahjongs.length - game.currentIndex;
-    var remainingGames = roomInfo.conf.maxGames - roomInfo.numOfGames;
+    const numOfMJ = game.mahjongs.length - game.currentIndex;
+    const remainingGames = roomInfo.conf.maxGames - roomInfo.numOfGames;
 
-    var data = {
+    const data = {
       state: game.state,
       numofmj: numOfMJ,
       button: game.button,
@@ -1114,11 +1116,11 @@ exports.setReady = function (userId, callback) {
     };
 
     data.seats = [];
-    var seatData = null;
-    for (var i = 0; i < 4; ++i) {
-      var sd = game.gameSeats[i];
+    const seatData = null;
+    for (const i = 0; i < 4; ++i) {
+      const sd = game.gameSeats[i];
 
-      var s = {
+      const s = {
         userid: sd.userId,
         folds: sd.folds,
         angangs: sd.angangs,
@@ -1160,37 +1162,37 @@ function store_single_history(userId, history) {
 }
 
 function store_history(roomInfo) {
-  var seats = roomInfo.seats;
-  var history = {
+  const seats = roomInfo.seats;
+  const history = {
     uuid: roomInfo.uuid,
     id: roomInfo.id,
     time: roomInfo.createTime,
     seats: new Array(4)
   };
 
-  for (var i = 0; i < seats.length; ++i) {
-    var rs = seats[i];
-    var hs = (history.seats[i] = {});
+  for (const i = 0; i < seats.length; ++i) {
+    const rs = seats[i];
+    const hs = (history.seats[i] = {});
     hs.userid = rs.userId;
     hs.name = crypto.toBase64(rs.name);
     hs.score = rs.score;
   }
 
-  for (var i = 0; i < seats.length; ++i) {
-    var s = seats[i];
+  for (const i = 0; i < seats.length; ++i) {
+    const s = seats[i];
     store_single_history(s.userId, history);
   }
 }
 
 function construct_game_base_info(game) {
-  var baseInfo = {
+  const baseInfo = {
     type: game.conf.type,
     button: game.button,
     index: game.gameIndex,
     mahjongs: game.mahjongs,
     game_seats: new Array(4)
   };
-  for (var i = 0; i < 4; ++i) {
+  for (const i = 0; i < 4; ++i) {
     baseInfo.game_seats[i] = game.gameSeats[i].holds;
   }
   game.baseInfoJson = JSON.stringify(baseInfo);
@@ -1207,13 +1209,13 @@ function store_game(game, callback) {
 
 // 开始新的一局
 exports.begin = function (roomId) {
-  var roomInfo = roomMgr.getRoom(roomId);
+  const roomInfo = roomMgr.getRoom(roomId);
   if (roomInfo == null) {
     return;
   }
-  var seats = roomInfo.seats;
+  const seats = roomInfo.seats;
 
-  var game = {
+  const game = {
     conf: roomInfo.conf,
     roomInfo,
     gameIndex: roomInfo.numOfGames,
@@ -1236,8 +1238,8 @@ exports.begin = function (roomId) {
 
   roomInfo.numOfGames++;
 
-  for (var i = 0; i < 4; ++i) {
-    var data = (game.gameSeats[i] = {});
+  for (const i = 0; i < 4; ++i) {
+    const data = (game.gameSeats[i] = {});
 
     data.game = game;
 
@@ -1314,12 +1316,12 @@ exports.begin = function (roomId) {
   // 发牌
   deal(game);
 
-  var numOfMJ = game.mahjongs.length - game.currentIndex;
-  var huansanzhang = roomInfo.conf.hsz;
+  const numOfMJ = game.mahjongs.length - game.currentIndex;
+  const huansanzhang = roomInfo.conf.hsz;
 
-  for (var i = 0; i < seats.length; ++i) {
+  for (const i = 0; i < seats.length; ++i) {
     // 开局时，通知前端必要的数据
-    var s = seats[i];
+    const s = seats[i];
     // 通知玩家手牌
     userMgr.sendMsg(s.userId, 'game_holds_push', game.gameSeats[i].holds);
     // 通知还剩多少张牌
@@ -1342,13 +1344,13 @@ exports.begin = function (roomId) {
 };
 
 exports.huanSanZhang = function (userId, p1, p2, p3) {
-  var seatData = gameSeatsOfUsers[userId];
+  const seatData = gameSeatsOfUsers[userId];
   if (seatData == null) {
     console.log("can't find user game data.");
     return;
   }
 
-  var game = seatData.game;
+  const game = seatData.game;
   if (game.state != 'huanpai') {
     console.log(`can't recv huansanzhang when game.state == ${game.state}`);
     return;
@@ -1381,24 +1383,24 @@ exports.huanSanZhang = function (userId, p1, p2, p3) {
 
   seatData.huanpais = [p1, p2, p3];
 
-  for (var i = 0; i < seatData.huanpais.length; ++i) {
-    var p = seatData.huanpais[i];
-    var idx = seatData.holds.indexOf(p);
+  for (const i = 0; i < seatData.huanpais.length; ++i) {
+    const p = seatData.huanpais[i];
+    const idx = seatData.holds.indexOf(p);
     seatData.holds.splice(idx, 1);
     seatData.countMap[p]--;
   }
   userMgr.sendMsg(seatData.userId, 'game_holds_push', seatData.holds);
 
-  for (var i = 0; i < game.gameSeats.length; ++i) {
-    var sd = game.gameSeats[i];
+  for (const i = 0; i < game.gameSeats.length; ++i) {
+    const sd = game.gameSeats[i];
     if (sd == seatData) {
-      var rd = {
+      const rd = {
         si: seatData.userId,
         huanpais: seatData.huanpais
       };
       userMgr.sendMsg(sd.userId, 'huanpai_notify', rd);
     } else {
-      var rd = {
+      const rd = {
         si: seatData.userId,
         huanpais: []
       };
@@ -1407,16 +1409,16 @@ exports.huanSanZhang = function (userId, p1, p2, p3) {
   }
 
   // 如果还有未换牌的玩家，则继承等待
-  for (var i = 0; i < game.gameSeats.length; ++i) {
+  for (const i = 0; i < game.gameSeats.length; ++i) {
     if (game.gameSeats[i].huanpais == null) {
       return;
     }
   }
 
   // 换牌函数
-  var fn = function (s1, huanjin) {
-    for (var i = 0; i < huanjin.length; ++i) {
-      var p = huanjin[i];
+  const fn = function (s1, huanjin) {
+    for (const i = 0; i < huanjin.length; ++i) {
+      const p = huanjin[i];
       s1.holds.push(p);
       if (s1.countMap[p] == null) {
         s1.countMap[p] = 0;
@@ -1426,9 +1428,9 @@ exports.huanSanZhang = function (userId, p1, p2, p3) {
   };
 
   // 开始换牌
-  var f = Math.random();
-  var s = game.gameSeats;
-  var huanpaiMethod = 0;
+  const f = Math.random();
+  const s = game.gameSeats;
+  const huanpaiMethod = 0;
   // 对家换牌
   if (f < 0.33) {
     fn(s[0], s[2].huanpais);
@@ -1452,14 +1454,14 @@ exports.huanSanZhang = function (userId, p1, p2, p3) {
     huanpaiMethod = 2;
   }
 
-  var rd = {
+  const rd = {
     method: huanpaiMethod
   };
   game.huanpaiMethod = huanpaiMethod;
 
   game.state = 'dingque';
-  for (var i = 0; i < s.length; ++i) {
-    var userId = s[i].userId;
+  for (const i = 0; i < s.length; ++i) {
+    const userId = s[i].userId;
     userMgr.sendMsg(userId, 'game_huanpai_over_push', rd);
 
     userMgr.sendMsg(userId, 'game_holds_push', s[i].holds);
@@ -1469,13 +1471,13 @@ exports.huanSanZhang = function (userId, p1, p2, p3) {
 };
 
 exports.dingQue = function (userId, type) {
-  var seatData = gameSeatsOfUsers[userId];
+  const seatData = gameSeatsOfUsers[userId];
   if (seatData == null) {
     console.log("can't find user game data.");
     return;
   }
 
-  var game = seatData.game;
+  const game = seatData.game;
   if (game.state != 'dingque') {
     console.log(`can't recv dingQue when game.state == ${game.state}`);
     return;
@@ -1492,8 +1494,8 @@ exports.dingQue = function (userId, type) {
   if (game.numOfQue == 4) {
     construct_game_base_info(game);
 
-    var arr = [1, 1, 1, 1];
-    for (var i = 0; i < game.gameSeats.length; ++i) {
+    const arr = [1, 1, 1, 1];
+    for (const i = 0; i < game.gameSeats.length; ++i) {
       arr[i] = game.gameSeats[i].que;
     }
     userMgr.broacastInRoom(
@@ -1505,9 +1507,9 @@ exports.dingQue = function (userId, type) {
     userMgr.broacastInRoom('game_playing_push', null, seatData.userId, true);
 
     // 进行听牌检查
-    for (var i = 0; i < game.gameSeats.length; ++i) {
-      var duoyu = -1;
-      var gs = game.gameSeats[i];
+    for (const i = 0; i < game.gameSeats.length; ++i) {
+      const duoyu = -1;
+      const gs = game.gameSeats[i];
       if (gs.holds.length == 14) {
         duoyu = gs.holds.pop();
         gs.countMap[duoyu] -= 1;
@@ -1519,7 +1521,7 @@ exports.dingQue = function (userId, type) {
       }
     }
 
-    var turnSeat = game.gameSeats[game.turn];
+    const turnSeat = game.gameSeats[game.turn];
     game.state = 'playing';
     // 通知玩家出牌方
     turnSeat.canChuPai = true;
@@ -1548,14 +1550,14 @@ exports.dingQue = function (userId, type) {
 
 exports.chuPai = function (userId, pai) {
   pai = Number.parseInt(pai);
-  var seatData = gameSeatsOfUsers[userId];
+  const seatData = gameSeatsOfUsers[userId];
   if (seatData == null) {
     console.log("can't find user game data.");
     return;
   }
 
-  var game = seatData.game;
-  var seatIndex = seatData.seatIndex;
+  const game = seatData.game;
+  const seatIndex = seatData.seatIndex;
   // 如果不该他出，则忽略
   if (game.turn != seatData.seatIndex) {
     console.log('not your turn.');
@@ -1581,7 +1583,7 @@ exports.chuPai = function (userId, pai) {
   }
 
   // 从此人牌中扣除
-  var index = seatData.holds.indexOf(pai);
+  const index = seatData.holds.indexOf(pai);
   if (index == -1) {
     console.log(`holds:${seatData.holds}`);
     console.log(`can't find mj.${pai}`);
@@ -1610,13 +1612,13 @@ exports.chuPai = function (userId, pai) {
   }
 
   // 检查是否有人要胡，要碰 要杠
-  var hasActions = false;
-  for (var i = 0; i < game.gameSeats.length; ++i) {
+  const hasActions = false;
+  for (const i = 0; i < game.gameSeats.length; ++i) {
     // 玩家自己不检查
     if (game.turn == i) {
       continue;
     }
-    var ddd = game.gameSeats[i];
+    const ddd = game.gameSeats[i];
     // 未胡牌的才检查杠和碰
     if (!ddd.hued) {
       checkCanPeng(game, ddd, pai);
@@ -1658,13 +1660,13 @@ exports.chuPai = function (userId, pai) {
 };
 
 exports.peng = function (userId) {
-  var seatData = gameSeatsOfUsers[userId];
+  const seatData = gameSeatsOfUsers[userId];
   if (seatData == null) {
     console.log("can't find user game data.");
     return;
   }
 
-  var game = seatData.game;
+  const game = seatData.game;
 
   // 如果是他出的牌，则忽略
   if (game.turn == seatData.seatIndex) {
@@ -1685,13 +1687,13 @@ exports.peng = function (userId) {
   }
 
   // 如果有人可以胡牌，则需要等待
-  var i = game.turn;
+  const i = game.turn;
   while (true) {
-    var i = (i + 1) % 4;
+    const i = (i + 1) % 4;
     if (i == game.turn) {
       break;
     } else {
-      var ddd = game.gameSeats[i];
+      const ddd = game.gameSeats[i];
       if (ddd.canHu && i != seatData.seatIndex) {
         return;
       }
@@ -1701,8 +1703,8 @@ exports.peng = function (userId) {
   clearAllOptions(game);
 
   // 验证手上的牌的数目
-  var pai = game.chuPai;
-  var c = seatData.countMap[pai];
+  const pai = game.chuPai;
+  const c = seatData.countMap[pai];
   if (c == null || c < 2) {
     console.log(`pai:${pai},count:${c}`);
     console.log(seatData.holds);
@@ -1713,8 +1715,8 @@ exports.peng = function (userId) {
   // 进行碰牌处理
   // 扣掉手上的牌
   // 从此人牌中扣除
-  for (var i = 0; i < 2; ++i) {
-    var index = seatData.holds.indexOf(pai);
+  for (const i = 0; i < 2; ++i) {
+    const index = seatData.holds.indexOf(pai);
     if (index == -1) {
       console.log("can't find mj.");
       return;
@@ -1749,12 +1751,12 @@ exports.peng = function (userId) {
 };
 
 exports.isPlaying = function (userId) {
-  var seatData = gameSeatsOfUsers[userId];
+  const seatData = gameSeatsOfUsers[userId];
   if (seatData == null) {
     return false;
   }
 
-  var game = seatData.game;
+  const game = seatData.game;
 
   if (game.state == 'idle') {
     return false;
@@ -1763,13 +1765,13 @@ exports.isPlaying = function (userId) {
 };
 
 function checkCanQiangGang(game, turnSeat, seatData, pai) {
-  var hasActions = false;
-  for (var i = 0; i < game.gameSeats.length; ++i) {
+  const hasActions = false;
+  for (const i = 0; i < game.gameSeats.length; ++i) {
     // 杠牌者不检查
     if (seatData.seatIndex == i) {
       continue;
     }
-    var ddd = game.gameSeats[i];
+    const ddd = game.gameSeats[i];
     checkCanHu(game, ddd, pai);
     if (ddd.canHu) {
       sendOperations(game, ddd, pai);
@@ -1790,12 +1792,12 @@ function checkCanQiangGang(game, turnSeat, seatData, pai) {
 }
 
 function doGang(game, turnSeat, seatData, gangtype, numOfCnt, pai) {
-  var seatIndex = seatData.seatIndex;
-  var gameTurn = turnSeat.seatIndex;
+  const seatIndex = seatData.seatIndex;
+  const gameTurn = turnSeat.seatIndex;
 
-  var isZhuanShouGang = false;
+  const isZhuanShouGang = false;
   if (gangtype == 'wangang') {
-    var idx = seatData.pengs.indexOf(pai);
+    const idx = seatData.pengs.indexOf(pai);
     if (idx >= 0) {
       seatData.pengs.splice(idx, 1);
     }
@@ -1808,8 +1810,8 @@ function doGang(game, turnSeat, seatData, gangtype, numOfCnt, pai) {
   // 进行碰牌处理
   // 扣掉手上的牌
   // 从此人牌中扣除
-  for (var i = 0; i < numOfCnt; ++i) {
-    var index = seatData.holds.indexOf(pai);
+  for (const i = 0; i < numOfCnt; ++i) {
+    const index = seatData.holds.indexOf(pai);
     if (index == -1) {
       console.log(seatData.holds);
       console.log("can't find mj.");
@@ -1824,18 +1826,18 @@ function doGang(game, turnSeat, seatData, gangtype, numOfCnt, pai) {
   // 记录下玩家的杠牌
   if (gangtype == 'angang') {
     seatData.angangs.push(pai);
-    var ac = recordUserAction(game, seatData, 'angang');
+    const ac = recordUserAction(game, seatData, 'angang');
     ac.score = game.conf.baseScore * 2;
   } else if (gangtype == 'diangang') {
     seatData.diangangs.push(pai);
-    var ac = recordUserAction(game, seatData, 'diangang', gameTurn);
+    const ac = recordUserAction(game, seatData, 'diangang', gameTurn);
     ac.score = game.conf.baseScore * 2;
-    var fs = turnSeat;
+    const fs = turnSeat;
     recordUserAction(game, fs, 'fanggang', seatIndex);
   } else if (gangtype == 'wangang') {
     seatData.wangangs.push(pai);
     if (isZhuanShouGang == false) {
-      var ac = recordUserAction(game, seatData, 'wangang');
+      const ac = recordUserAction(game, seatData, 'wangang');
       ac.score = game.conf.baseScore;
     } else {
       recordUserAction(game, seatData, 'zhuanshougang');
@@ -1861,14 +1863,14 @@ function doGang(game, turnSeat, seatData, gangtype, numOfCnt, pai) {
 }
 
 exports.gang = function (userId, pai) {
-  var seatData = gameSeatsOfUsers[userId];
+  const seatData = gameSeatsOfUsers[userId];
   if (seatData == null) {
     console.log("can't find user game data.");
     return;
   }
 
-  var seatIndex = seatData.seatIndex;
-  var game = seatData.game;
+  const seatIndex = seatData.seatIndex;
+  const game = seatData.game;
 
   // 如果没有杠的机会，则不能再杠
   if (seatData.canGang == false) {
@@ -1876,7 +1878,7 @@ exports.gang = function (userId, pai) {
     return;
   }
 
-  var numOfCnt = seatData.countMap[pai];
+  const numOfCnt = seatData.countMap[pai];
 
   // 胡了的，只能直杠
   if (numOfCnt != 1 && seatData.hued) {
@@ -1890,20 +1892,20 @@ exports.gang = function (userId, pai) {
   }
 
   // 如果有人可以胡牌，则需要等待
-  var i = game.turn;
+  const i = game.turn;
   while (true) {
-    var i = (i + 1) % 4;
+    const i = (i + 1) % 4;
     if (i == game.turn) {
       break;
     } else {
-      var ddd = game.gameSeats[i];
+      const ddd = game.gameSeats[i];
       if (ddd.canHu && i != seatData.seatIndex) {
         return;
       }
     }
   }
 
-  var gangtype = '';
+  const gangtype = '';
   // 弯杠 去掉碰牌
   if (numOfCnt == 1) {
     gangtype = 'wangang';
@@ -1928,9 +1930,9 @@ exports.gang = function (userId, pai) {
   );
 
   // 如果是弯杠，则需要检查是否可以抢杠
-  var turnSeat = game.gameSeats[game.turn];
+  const turnSeat = game.gameSeats[game.turn];
   if (numOfCnt == 1) {
-    var canQiangGang = checkCanQiangGang(game, turnSeat, seatData, pai);
+    const canQiangGang = checkCanQiangGang(game, turnSeat, seatData, pai);
     if (canQiangGang) {
       return;
     }
@@ -1940,14 +1942,14 @@ exports.gang = function (userId, pai) {
 };
 
 exports.hu = function (userId) {
-  var seatData = gameSeatsOfUsers[userId];
+  const seatData = gameSeatsOfUsers[userId];
   if (seatData == null) {
     console.log("can't find user game data.");
     return;
   }
 
-  var seatIndex = seatData.seatIndex;
-  var game = seatData.game;
+  const seatIndex = seatData.seatIndex;
+  const game = seatData.game;
 
   // 如果他不能和牌，那和个啥啊
   if (seatData.canHu == false) {
@@ -1957,12 +1959,12 @@ exports.hu = function (userId) {
 
   // 标记为和牌
   seatData.hued = true;
-  var hupai = game.chuPai;
-  var isZimo = false;
+  const hupai = game.chuPai;
+  const isZimo = false;
 
-  var turnSeat = game.gameSeats[game.turn];
+  const turnSeat = game.gameSeats[game.turn];
 
-  var huData = {
+  const huData = {
     ishupai: true,
     pai: -1,
     action: null,
@@ -1982,11 +1984,11 @@ exports.hu = function (userId) {
   seatData.huInfo.push(huData);
 
   huData.isGangHu = turnSeat.lastFangGangSeat >= 0;
-  var notify = -1;
+  const notify = -1;
 
   if (game.qiangGangContext != null) {
     hupai = game.qiangGangContext.pai;
-    var gangSeat = game.qiangGangContext.seatData;
+    const gangSeat = game.qiangGangContext.seatData;
     notify = hupai;
     huData.iszimo = false;
     huData.action = 'qiangganghu';
@@ -1997,7 +1999,7 @@ exports.hu = function (userId) {
     recordGameAction(game, seatIndex, ACTION_HU, hupai);
     game.qiangGangContext.isValid = false;
 
-    var idx = gangSeat.holds.indexOf(hupai);
+    const idx = gangSeat.holds.indexOf(hupai);
     if (idx != -1) {
       gangSeat.holds.splice(idx, 1);
       gangSeat.countMap[hupai]--;
@@ -2019,7 +2021,7 @@ exports.hu = function (userId) {
         huData.action = 'ganghua';
         huData.iszimo = true;
       } else {
-        var diangganghua_zimo = game.conf.dianganghua == 1;
+        const diangganghua_zimo = game.conf.dianganghua == 1;
         huData.action = 'dianganghua';
         huData.iszimo = diangganghua_zimo;
         huData.target = turnSeat.lastFangGangSeat;
@@ -2035,7 +2037,7 @@ exports.hu = function (userId) {
     notify = game.chuPai;
     huData.pai = hupai;
 
-    var at = 'hu';
+    const at = 'hu';
     // 炮胡
     if (turnSeat.lastFangGangSeat >= 0) {
       at = 'gangpaohu';
@@ -2047,13 +2049,13 @@ exports.hu = function (userId) {
 
     // 毛转雨
     if (turnSeat.lastFangGangSeat >= 0) {
-      for (var i = turnSeat.actions.length - 1; i >= 0; --i) {
-        var t = turnSeat.actions[i];
+      for (const i = turnSeat.actions.length - 1; i >= 0; --i) {
+        const t = turnSeat.actions[i];
         if (t.type == 'diangang' || t.type == 'wangang' || t.type == 'angang') {
           t.state = 'nop';
           t.payTimes = 0;
 
-          var nac = {
+          const nac = {
             type: 'maozhuanyu',
             owner: turnSeat,
             ref: t
@@ -2065,7 +2067,7 @@ exports.hu = function (userId) {
     }
 
     // 记录玩家放炮信息
-    var fs = game.gameSeats[game.turn];
+    const fs = game.gameSeats[game.turn];
     if (at == 'gangpaohu') {
       at = 'gangpao';
     } else {
@@ -2091,7 +2093,7 @@ exports.hu = function (userId) {
   }
 
   // 保存番数
-  var ti = seatData.tingMap[hupai];
+  const ti = seatData.tingMap[hupai];
   huData.fan = ti.fan;
   huData.pattern = ti.pattern;
   huData.iszimo = isZimo;
@@ -2129,16 +2131,16 @@ exports.hu = function (userId) {
   if (game.lastHuPaiSeat == -1) {
     game.lastHuPaiSeat = seatIndex;
   } else {
-    var lp = (game.lastFangGangSeat - game.turn + 4) % 4;
-    var cur = (seatData.seatIndex - game.turn + 4) % 4;
+    const lp = (game.lastFangGangSeat - game.turn + 4) % 4;
+    const cur = (seatData.seatIndex - game.turn + 4) % 4;
     if (cur > lp) {
       game.lastHuPaiSeat = seatData.seatIndex;
     }
   }
 
   // 清空所有非胡牌操作
-  for (var i = 0; i < game.gameSeats.length; ++i) {
-    var ddd = game.gameSeats[i];
+  for (const i = 0; i < game.gameSeats.length; ++i) {
+    const ddd = game.gameSeats[i];
     ddd.canPeng = false;
     ddd.canGang = false;
     ddd.canChuPai = false;
@@ -2146,8 +2148,8 @@ exports.hu = function (userId) {
   }
 
   // 如果还有人可以胡牌，则等待
-  for (var i = 0; i < game.gameSeats.length; ++i) {
-    var ddd = game.gameSeats[i];
+  for (const i = 0; i < game.gameSeats.length; ++i) {
+    const ddd = game.gameSeats[i];
     if (ddd.canHu) {
       return;
     }
@@ -2161,14 +2163,14 @@ exports.hu = function (userId) {
 };
 
 exports.guo = function (userId) {
-  var seatData = gameSeatsOfUsers[userId];
+  const seatData = gameSeatsOfUsers[userId];
   if (seatData == null) {
     console.log("can't find user game data.");
     return;
   }
 
-  var seatIndex = seatData.seatIndex;
-  var game = seatData.game;
+  const seatIndex = seatData.seatIndex;
+  const game = seatData.game;
 
   // 如果玩家没有对应的操作，则也认为是非法消息
   if ((seatData.canGang || seatData.canPeng || seatData.canHu) == false) {
@@ -2177,7 +2179,7 @@ exports.guo = function (userId) {
   }
 
   // 如果是玩家自己的轮子，不是接牌，则不需要额外操作
-  var doNothing = game.chuPai == -1 && game.turn == seatIndex;
+  const doNothing = game.chuPai == -1 && game.turn == seatIndex;
 
   userMgr.sendMsg(seatData.userId, 'guo_result');
   clearAllOptions(game, seatData);
@@ -2192,8 +2194,8 @@ exports.guo = function (userId) {
   }
 
   // 如果还有人可以操作，则等待
-  for (var i = 0; i < game.gameSeats.length; ++i) {
-    var ddd = game.gameSeats[i];
+  for (const i = 0; i < game.gameSeats.length; ++i) {
+    const ddd = game.gameSeats[i];
     if (hasOperations(ddd)) {
       return;
     }
@@ -2201,7 +2203,7 @@ exports.guo = function (userId) {
 
   // 如果是已打出的牌，则需要通知。
   if (game.chuPai >= 0) {
-    var uid = game.gameSeats[game.turn].userId;
+    const uid = game.gameSeats[game.turn].userId;
     userMgr.broacastInRoom(
       'guo_notify_push',
       { userId: uid, pai: game.chuPai },
@@ -2212,7 +2214,7 @@ exports.guo = function (userId) {
     game.chuPai = -1;
   }
 
-  var qiangGangContext = game.qiangGangContext;
+  const qiangGangContext = game.qiangGangContext;
   // 清除所有的操作
   clearAllOptions(game);
 
@@ -2233,31 +2235,31 @@ exports.guo = function (userId) {
 };
 
 exports.hasBegan = function (roomId) {
-  var game = games[roomId];
+  const game = games[roomId];
   if (game != null) {
     return true;
   }
-  var roomInfo = roomMgr.getRoom(roomId);
+  const roomInfo = roomMgr.getRoom(roomId);
   if (roomInfo != null) {
     return roomInfo.numOfGames > 0;
   }
   return false;
 };
 
-var dissolvingList = [];
+const dissolvingList = [];
 
 exports.doDissolve = function (roomId) {
-  var roomInfo = roomMgr.getRoom(roomId);
+  const roomInfo = roomMgr.getRoom(roomId);
   if (roomInfo == null) {
     return null;
   }
 
-  var game = games[roomId];
+  const game = games[roomId];
   doGameOver(game, roomInfo.seats[0].userId, true);
 };
 
 exports.dissolveRequest = function (roomId, userId) {
-  var roomInfo = roomMgr.getRoom(roomId);
+  const roomInfo = roomMgr.getRoom(roomId);
   if (roomInfo == null) {
     return null;
   }
@@ -2266,7 +2268,7 @@ exports.dissolveRequest = function (roomId, userId) {
     return null;
   }
 
-  var seatIndex = roomMgr.getUserSeat(userId);
+  const seatIndex = roomMgr.getUserSeat(userId);
   if (seatIndex == null) {
     return null;
   }
@@ -2283,7 +2285,7 @@ exports.dissolveRequest = function (roomId, userId) {
 };
 
 exports.dissolveAgree = function (roomId, userId, agree) {
-  var roomInfo = roomMgr.getRoom(roomId);
+  const roomInfo = roomMgr.getRoom(roomId);
   if (roomInfo == null) {
     return null;
   }
@@ -2292,7 +2294,7 @@ exports.dissolveAgree = function (roomId, userId, agree) {
     return null;
   }
 
-  var seatIndex = roomMgr.getUserSeat(userId);
+  const seatIndex = roomMgr.getUserSeat(userId);
   if (seatIndex == null) {
     return null;
   }
@@ -2301,7 +2303,7 @@ exports.dissolveAgree = function (roomId, userId, agree) {
     roomInfo.dr.states[seatIndex] = true;
   } else {
     roomInfo.dr = null;
-    var idx = dissolvingList.indexOf(roomId);
+    const idx = dissolvingList.indexOf(roomId);
     if (idx != -1) {
       dissolvingList.splice(idx, 1);
     }
@@ -2310,10 +2312,10 @@ exports.dissolveAgree = function (roomId, userId, agree) {
 };
 
 function update() {
-  for (var i = dissolvingList.length - 1; i >= 0; --i) {
-    var roomId = dissolvingList[i];
+  for (const i = dissolvingList.length - 1; i >= 0; --i) {
+    const roomId = dissolvingList[i];
 
-    var roomInfo = roomMgr.getRoom(roomId);
+    const roomInfo = roomMgr.getRoom(roomId);
     if (roomInfo != null && roomInfo.dr != null) {
       if (Date.now() > roomInfo.dr.endTime) {
         console.log('delete room and games');

@@ -1,15 +1,11 @@
-var db = require('../utils/db');
-var CONFIG_PATH = process.env.CONFIG_PATH;
-var configs = require(CONFIG_PATH);
+const app = require('../utils/app');
+const routes = require('./routes');
+const configs = require('../configs');
 
-//init db pool.
-db.init(configs.mysql());
+const config = configs.account_server();
 
-//
-
-var config = configs.account_server();
-var as = require('./account_server');
-as.start(config);
-
-var dapi = require('./dealer_api');
-dapi.start(config);
+app(routes).listen(config.CLIENT_PORT, (err) => {
+  if (!err) {
+    console.log(`server is listening on port ${config.CLIENT_PORT}`);
+  }
+});

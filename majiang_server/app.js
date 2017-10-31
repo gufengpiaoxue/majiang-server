@@ -1,18 +1,23 @@
-var http_service = require("./http_service");
-var socket_service = require("./socket_service");
+const httpRoutes = require('./routes/http');
+const socketRoutes = require('./routes/socket');
 
-//从配置文件获取服务器信息
-var CONFIG_PATH = process.env.CONFIG_PATH;
-var configs = require(CONFIG_PATH);
-var config = configs.game_server();
+const app = require('../utils/app');
+const io = require('../utils/io');
 
-var db = require('../utils/db');
-db.init(configs.mysql());
+// 从配置文件获取服务器信息
+const configs = require('../configs');
 
-//开启HTTP服务
-http_service.start(config);
+const config = configs.game_server();
 
-//开启外网SOCKET服务
-socket_service.start(config);
+// 开启HTTP服务
+app(httpRoutes).listen(config.HTTP_PORT, config.FOR_HALL_IP, (err) => {
+  if (!err) {
+    console.log(`http server is listening on ${config.FOR_HALL_IP}:${config.HTTP_PORT}`);
+  }
+});
 
-//require('./gamemgr');
+io(socketRoutes).listen(config.CLIENT_PORT, (err) => {
+  if (!err) {
+    console.log(`socket server is listening on port ${config.CLIENT_PORT}`);
+  }
+});

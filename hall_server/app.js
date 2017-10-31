@@ -1,12 +1,16 @@
-var client_service = require("./client_service");
-var room_service = require("./room_service");
-var CONFIG_PATH = process.env.CONFIG_PATH;
+const app = require('../utils/app');
+const configs = require('../configs');
 
-var configs = require(CONFIG_PATH);
-var config = configs.hall_server();
+const config = configs.hall_server();
 
-var db = require('../utils/db');
-db.init(configs.mysql());
 
-client_service.start(config);
-room_service.start(config);
+app(require('./routes/client')).listen(config.CLEINT_PORT, (err) => {
+  if (!err) {
+    console.log(`server is listening on port ${config.CLEINT_PORT}`);
+  }
+});
+app(require('./routes/room').start).listen(config.ROOM_PORT, (err) => {
+  if (!err) {
+    console.log(`server is listening on port ${config.ROOM_PORT}`);
+  }
+});

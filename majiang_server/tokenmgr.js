@@ -1,48 +1,44 @@
-var crypto = require("../utils/crypto");
+const crypto = require('../utils/crypto');
 
-var tokens = {};
-var users = {};
+const tokens = {};
+const users = {};
 
-exports.createToken = function(userId,lifeTime){
-	var token = users[userId];
-	if(token != null){
-		this.delToken(token);
-	}
+exports.createToken = (userId, lifeTime) => {
+  let token = users[userId];
+  if (token != null) {
+    this.delToken(token);
+  }
 
-	var time = Date.now();
-	token = crypto.md5(userId + "!@#$%^&" + time);
-	tokens[token] = {
-		userId: userId,
-		time: time,
-		lifeTime: lifeTime
-	};
-	users[userId] = token;
-	return token;
+  const time = Date.now();
+  token = crypto.md5(`${userId}!@#$%^&${time}`);
+  tokens[token] = {
+    userId,
+    time,
+    lifeTime
+  };
+  users[userId] = token;
+  return token;
 };
 
-exports.getToken = function(userId){
-	return users[userId];
+exports.getToken = userId => users[userId];
+
+exports.getUserID = token => tokens[token].userId;
+
+exports.isTokenValid = (token) => {
+  const info = tokens[token];
+  if (info == null) {
+    return false;
+  }
+  if (info.time + info.lifetime < Date.now()) {
+    return false;
+  }
+  return true;
 };
 
-exports.getUserID = function(token){
-	return tokens[token].userId;
-};
-
-exports.isTokenValid = function(token){
-	var info = tokens[token];
-	if(info == null){
-		return false;
-	}
-	if(info.time + info.lifetime < Date.now()){
-		return false;
-	}
-	return true;
-};
-
-exports.delToken = function(token){
-	var info = tokens[token];
-	if(info != null){
-		tokens[token] = null;
-		users[info.userId] = null;
-	}
+exports.delToken = (token) => {
+  const info = tokens[token];
+  if (info != null) {
+    tokens[token] = null;
+    users[info.userId] = null;
+  }
 };
